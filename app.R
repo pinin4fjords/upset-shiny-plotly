@@ -17,6 +17,7 @@ ui <-
             accept = c("text/csv",
                        "text/comma-separated-values,text/plain", ".csv")
           ),
+          downloadLink("example_data", "Example data"),
           tags$hr(),
           uiOutput("sets"),
           selectInput(
@@ -49,12 +50,12 @@ ui <-
     ),
     dashboardBody(
       h3("Intersection plots"),
+      wellPanel(uiOutput('upset_credits')),
       plotlyOutput("plotly_upset", height = "600px")
     )
   )
 
 server <- function(input, output) {
-  
   # Render a control for users to pick from their supplied sets
   
   output$sets <- renderUI({
@@ -103,7 +104,7 @@ server <- function(input, output) {
   # Accessor for the nsets parameter
   
   getNsets <- reactive({
-    validate(need(!is.null(input$nsets), "Waiting for nsets"))
+    req(!is.null(input$nsets))
     input$nsets
   })
   
@@ -148,26 +149,44 @@ server <- function(input, output) {
   
   ############################################################################# The business end- derive sets and pass for intersection
   
+  # Get the input file
+  
+  getInfile <- reactive({
+    inFile <- input$file1
+    
+    if (is.null(inFile)) {
+      # Look for example data to use by default
+      
+      if (file.exists(system.file("extdata", "movies.csv", package = "UpSetR"))) {
+        filename <- system.file("extdata", "movies.csv", package = "UpSetR")
+      } else if (file.exists('movies.csv')) {
+        filename <- 'movies.csv'
+      } else {
+        filename <- NULL
+      }
+    } else {
+      filename <- inFile$datapath
+    }
+  })
+  
+  # Read input data
+  
+  readInputData <- reactive({
+    filename <- getInfile()
+    req(!is.null(filename))
+    read.csv(filename, sep = ";")
+  })
+  
   # Read input sets
   
   getValidSets <- reactive({
     withProgress(message = "Deriving input sets", value = 0, {
-      inFile <- input$file1
-      
-      if (is.null(inFile)) {
-        if (file.exists(system.file("extdata", "movies.csv", package = "UpSetR"))) {
-          filename <- system.file("extdata", "movies.csv", package = "UpSetR")
-        } else {
-          filename <- NULL
-        }
-      } else {
-        filename <- inFile$datapath
-      }
+      filename <- getInfile()
       
       if (is.null(filename)) {
         NULL
       } else {
-        setdata <- read.csv(filename, sep = ";")
+        setdata <- readInputData()
         logical_cols <-
           colnames(setdata)[apply(setdata, 2, function(x)
             all(x %in% c(0, 1)))]
@@ -438,6 +457,34 @@ server <- function(input, output) {
     }
     
     p
+  })
+  
+  # Provide the example data for download
+  
+  output$example_data <- downloadHandler(
+    filename = function() {
+      paste("movies-", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      data <- readInputData()
+      
+      write.csv(data, file)
+    }
+  )
+  
+  # Don't make out like UpSet is my work....
+  
+  output$upset_credits <- renderUI({
+    list(p(
+      HTML(
+        "This is a Shiny and Plotly-driven plot based on the work of Lex, Gehlenborg et al on UpSet plots. See the <a href='http://www.caleydo.org/tools/upset/'>UpSet documentation</a> and <a href='http://www.nature.com/nmeth/journal/v11/n8/abs/nmeth.3033.html'>paper</a> for more information."
+      )
+    ),
+    p(
+      HTML(
+        "UpSet already comes in an advanced <a href = 'http://vcg.github.io/upset/'>interactive form</a>, and a <a href='https://gehlenborglab.shinyapps.io/upsetr/'>basic UpSet Shiny</a> has been built by UpSet's authors. The motivation for making this Shiny app was just to create a more interactive version of an UpSet plot from within R, using <a href='https://plot.ly/r/'>Plotly</a> to produce the interactive elements from within Shiny."
+      )
+    ))
   })
 }
 
