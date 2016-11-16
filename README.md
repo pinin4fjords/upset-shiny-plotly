@@ -8,6 +8,10 @@ A very simple Shiny dashboard, illustrating how to make an upset plot from scrat
 
 Additional to the traditional UpSet plot based on the areas of Venn/Euler diagrams where items are essentially assigned to the highest order interaction with which they're involved, this plot also allows a display where ALL items matching a given intersection can be included.
 
+## Example data
+
+This is the 'movies.csv' provided with the UpSetR package.
+
 ## References
 
 * Lex and Gehlenborg (2014). Points of view: Sets and intersections. <em>Nature Methods</em> 11, 779 (2014). <a href=\"http://www.nature.com/nmeth/journal/v11/n8/abs/nmeth.3033.html\">http://www.nature.com/nmeth/journal/v11/n8/abs/nmeth.3033.html</a>
